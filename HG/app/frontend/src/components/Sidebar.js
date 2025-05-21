@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Drawer,
   List,
@@ -8,56 +7,65 @@ import {
   ListItemText,
   ListItemButton,
   Divider,
+  Typography,
+  Box,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
-  People as PeopleIcon,
-  Business as BusinessIcon,
   Person as PersonIcon,
-  Public as CountryIcon,
-  Category as CategoryIcon,
   Receipt as InvoiceIcon,
-  Settings as ConfigureTaxIcon,
-  ShoppingCart as InvoiceProductIcon,
 } from '@mui/icons-material';
-
-const drawerWidth = 240;
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const menuItems = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-  { text: 'Users', icon: <PeopleIcon />, path: '/users' },
-  { text: 'Companies', icon: <BusinessIcon />, path: '/companies' },
-  { text: 'Customers', icon: <PersonIcon />, path: '/customers' },
+  { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+  { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
   { text: 'Invoices', icon: <InvoiceIcon />, path: '/invoices' },
-  { text: 'Countries', icon: <CountryIcon />, path: '/countries' },
-  { text: 'Categories', icon: <CategoryIcon />, path: '/categories' },
-  { text: 'Configure Taxes', icon: <ConfigureTaxIcon />, path: '/configure-taxes' },
-  { text: 'Invoice Products', icon: <InvoiceProductIcon />, path: '/invoice-products' },
 ];
 
-const Sidebar = () => {
+const Sidebar = ({ open, onClose, companyName }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Only redirect to "/" when closing the sidebar via backdrop/Esc, not when clicking a menu item
+  const handleDrawerClose = (event, reason) => {
+    // Only redirect if closing by backdropClick or escapeKeyDown
+    if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+      if (location.pathname !== '/') {
+        navigate('/');
+      }
+    }
+    onClose();
+  };
+
   return (
     <Drawer
-      variant="permanent"
+      variant="temporary"
+      open={open}
+      onClose={handleDrawerClose}
       sx={{
-        width: drawerWidth,
-        flexShrink: 0,
         '& .MuiDrawer-paper': {
-          width: drawerWidth,
+          width: 240,
           boxSizing: 'border-box',
           mt: 8,
         },
       }}
     >
+      <Box sx={{ p: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+          {companyName}
+        </Typography>
+      </Box>
+      <Divider />
       <List>
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton
               selected={location.pathname === item.path}
-              onClick={() => navigate(item.path)}
+              onClick={() => {
+                navigate(item.path);
+                onClose();
+              }}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>
               <ListItemText primary={item.text} />
@@ -65,7 +73,6 @@ const Sidebar = () => {
           </ListItem>
         ))}
       </List>
-      <Divider />
     </Drawer>
   );
 };

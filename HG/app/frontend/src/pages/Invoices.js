@@ -9,10 +9,11 @@ import {
   TextField,
   Typography,
   Paper,
+  MenuItem,
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import DataTable from '../components/DataTable';
-import { invoiceAPI } from '../api/api';
+import { invoiceAPI, customerAPI, configureTaxAPI } from '../api/api';
 
 const Invoices = () => {
   const [invoices, setInvoices] = useState([]);
@@ -24,6 +25,29 @@ const Invoices = () => {
     invoice_date: '',
     due_date: '',
     company_id: '',
+    customer_id: '',
+    tax_id: '',
+  });
+
+  // Customer and Tax Dialogs
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const [taxDialogOpen, setTaxDialogOpen] = useState(false);
+
+  // Customer and Tax Data
+  const [customers, setCustomers] = useState([]);
+  const [taxes, setTaxes] = useState([]);
+
+  // Customer Form
+  const [customerForm, setCustomerForm] = useState({
+    customer_name: '',
+    customer_email: '',
+    customer_address: '',
+  });
+
+  // Tax Form
+  const [taxForm, setTaxForm] = useState({
+    tax_name: '',
+    tax_rate: '',
   });
 
   const columns = [
@@ -32,6 +56,8 @@ const Invoices = () => {
     { field: 'invoice_date', headerName: 'Invoice Date', width: 150 },
     { field: 'due_date', headerName: 'Due Date', width: 150 },
     { field: 'company_id', headerName: 'Company ID', width: 120 },
+    { field: 'customer_id', headerName: 'Customer', width: 150 },
+    { field: 'tax_id', headerName: 'Tax', width: 120 },
   ];
 
   const fetchInvoices = async () => {
@@ -46,8 +72,28 @@ const Invoices = () => {
     }
   };
 
+  const fetchCustomers = async () => {
+    try {
+      const data = await customerAPI.getAllCustomers();
+      setCustomers(data);
+    } catch (error) {
+      setCustomers([]);
+    }
+  };
+
+  const fetchTaxes = async () => {
+    try {
+      const data = await configureTaxAPI.getAllConfigureTax();
+      setTaxes(data);
+    } catch (error) {
+      setTaxes([]);
+    }
+  };
+
   useEffect(() => {
     fetchInvoices();
+    fetchCustomers();
+    fetchTaxes();
   }, []);
 
   const handleOpenDialog = (invoice = null) => {
@@ -57,11 +103,15 @@ const Invoices = () => {
       invoice_date: invoice.invoice_date,
       due_date: invoice.due_date,
       company_id: invoice.company_id,
+      customer_id: invoice.customer_id || '',
+      tax_id: invoice.tax_id || '',
     } : {
       invoice_no: '',
       invoice_date: '',
       due_date: '',
       company_id: '',
+      customer_id: '',
+      tax_id: '',
     });
     setOpenDialog(true);
   };
@@ -74,6 +124,8 @@ const Invoices = () => {
       invoice_date: '',
       due_date: '',
       company_id: '',
+      customer_id: '',
+      tax_id: '',
     });
   };
 
@@ -110,19 +162,69 @@ const Invoices = () => {
     }
   };
 
+  // Customer Dialog Handlers
+  const handleCustomerFormChange = (e) => {
+    const { name, value } = e.target;
+    setCustomerForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleAddCustomer = async (e) => {
+    e.preventDefault();
+    await customerAPI.createCustomer(customerForm);
+    setCustomerDialogOpen(false);
+    setCustomerForm({ customer_name: '', customer_email: '', customer_address: '' });
+    fetchCustomers();
+  };
+
+  // Tax Dialog Handlers
+  const handleTaxFormChange = (e) => {
+    const { name, value } = e.target;
+    setTaxForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleAddTax = async (e) => {
+    e.preventDefault();
+    await configureTaxAPI.createConfigureTax(taxForm);
+    setTaxDialogOpen(false);
+    setTaxForm({ tax_name: '', tax_rate: '' });
+    fetchTaxes();
+  };
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
         <Typography variant="h4" component="h1">
           Invoices
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-        >
-          Add Invoice
-        </Button>
+        <Box>
+          <Button
+            variant="outlined"
+            sx={{ mr: 2 }}
+            onClick={() => setCustomerDialogOpen(true)}
+          >
+            Add Customer
+          </Button>
+          <Button
+            variant="outlined"
+            sx={{ mr: 2 }}
+            onClick={() => setTaxDialogOpen(true)}
+          >
+            Add Configure Tax
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog()}
+          >
+            Add Invoice
+          </Button>
+        </Box>
       </Box>
       <Paper sx={{ p: 2 }}>
         <DataTable
@@ -134,6 +236,7 @@ const Invoices = () => {
           getRowId={(row) => row.id}
         />
       </Paper>
+      {/* Invoice Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
           {selectedInvoice ? 'Edit Invoice' : 'Add New Invoice'}
@@ -172,6 +275,30 @@ const Invoices = () => {
               onChange={handleInputChange}
               fullWidth
             />
+            <TextField
+              select
+              name="customer_id"
+              label="Customer"
+              value={formData.customer_id}
+              onChange={handleInputChange}
+              fullWidth
+            >
+              {customers.map((c) => (
+                <MenuItem key={c.id} value={c.id}>{c.customer_name}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              name="tax_id"
+              label="Tax"
+              value={formData.tax_id}
+              onChange={handleInputChange}
+              fullWidth
+            >
+              {taxes.map((t) => (
+                <MenuItem key={t.id} value={t.id}>{t.tax_name} ({t.tax_rate}%)</MenuItem>
+              ))}
+            </TextField>
           </Box>
         </DialogContent>
         <DialogActions>
@@ -180,6 +307,65 @@ const Invoices = () => {
             {selectedInvoice ? 'Update' : 'Create'}
           </Button>
         </DialogActions>
+      </Dialog>
+      {/* Add Customer Dialog */}
+      <Dialog open={customerDialogOpen} onClose={() => setCustomerDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Add New Customer</DialogTitle>
+        <DialogContent>
+          <form onSubmit={handleAddCustomer}>
+            <TextField
+              label="Customer Name"
+              name="customer_name"
+              value={customerForm.customer_name}
+              onChange={handleCustomerFormChange}
+              fullWidth margin="normal" required
+            />
+            <TextField
+              label="Customer Email"
+              name="customer_email"
+              value={customerForm.customer_email}
+              onChange={handleCustomerFormChange}
+              fullWidth margin="normal"
+            />
+            <TextField
+              label="Customer Address"
+              name="customer_address"
+              value={customerForm.customer_address}
+              onChange={handleCustomerFormChange}
+              fullWidth margin="normal"
+            />
+            <DialogActions>
+              <Button onClick={() => setCustomerDialogOpen(false)}>Cancel</Button>
+              <Button type="submit" variant="contained">Add</Button>
+            </DialogActions>
+          </form>
+        </DialogContent>
+      </Dialog>
+      {/* Add Tax Dialog */}
+      <Dialog open={taxDialogOpen} onClose={() => setTaxDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Add Configure Tax</DialogTitle>
+        <DialogContent>
+          <form onSubmit={handleAddTax}>
+            <TextField
+              label="Tax Name"
+              name="tax_name"
+              value={taxForm.tax_name}
+              onChange={handleTaxFormChange}
+              fullWidth margin="normal" required
+            />
+            <TextField
+              label="Tax Rate (%)"
+              name="tax_rate"
+              value={taxForm.tax_rate}
+              onChange={handleTaxFormChange}
+              fullWidth margin="normal" required
+            />
+            <DialogActions>
+              <Button onClick={() => setTaxDialogOpen(false)}>Cancel</Button>
+              <Button type="submit" variant="contained">Add</Button>
+            </DialogActions>
+          </form>
+        </DialogContent>
       </Dialog>
     </Box>
   );

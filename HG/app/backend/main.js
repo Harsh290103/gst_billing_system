@@ -17,8 +17,8 @@ app.use((request, response, next)=>
 
 app.use(express.json());  
 
-app.use("/admin", adminRouterApp);
-app.use("/emps", empRouterApp);
-app.use("/customer", customerRouterApp);
+app.use("/", adminRouterApp);
+app.use("/", empRouterApp);
+app.use("/", customerRouterApp);
 
 app.listen(9000, ()=>{console.log("Server started listening at port 9000")})
